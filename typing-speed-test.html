@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>打字機 · Carriage Type</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg-1: #241b3a;
+    --bg-2: #3a2454;
+    --bg-3: #1b2a4a;
+    --card: rgba(255, 250, 255, 0.62);
+    --card-border: rgba(255,255,255,0.55);
+    --ink: #3c3358;
+    --ink-soft: #8478a3;
+    --off-white: #f4f1ff;
+    --bloom-pink: #ffaed1;
+    --bloom-lavender: #c6a8ff;
+    --bloom-sky: #9fd8ff;
+    --bloom-mint: #a6f1d0;
+    --accent-grad: linear-gradient(135deg, var(--bloom-pink) 0%, var(--bloom-lavender) 55%, var(--bloom-sky) 100%);
+    --ok: #2fbf86;
+    --ok-glow: rgba(47,191,134,0.55);
+    --err: #ef5f8a;
+    --err-glow: rgba(239,95,138,0.55);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    min-height:100vh;
+    overflow-x:hidden;
+    background:
+      radial-gradient(1100px 700px at 15% -10%, var(--bg-3) 0%, transparent 60%),
+      radial-gradient(900px 600px at 100% 10%, var(--bg-2) 0%, transparent 55%),
+      linear-gradient(160deg, var(--bg-1) 0%, #1a1530 100%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 40px 16px;
+    font-family: "Quicksand", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--off-white);
+    position:relative;
+  }
+
+  .aurora{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:0;
+  }
+  .aurora span{
+    position:absolute;
+    border-radius:50%;
+    filter: blur(80px);
+    opacity:0.55;
+    mix-blend-mode: screen;
+    animation: drift 24s ease-in-out infinite alternate;
+  }
+  .aurora span:nth-child(1){ width:420px; height:420px; left:-80px; top:-60px; background:var(--bloom-pink); }
+  .aurora span:nth-child(2){ width:380px; height:380px; right:-90px; top:10%; background:var(--bloom-lavender); animation-delay:-6s; animation-duration:28s; }
+  .aurora span:nth-child(3){ width:340px; height:340px; left:8%; bottom:-100px; background:var(--bloom-sky); animation-delay:-12s; animation-duration:22s; }
+  .aurora span:nth-child(4){ width:300px; height:300px; right:12%; bottom:-60px; background:var(--bloom-mint); animation-delay:-3s; animation-duration:26s; }
+  @keyframes drift{
+    0%{ transform: translate(0,0) scale(1); }
+    100%{ transform: translate(30px,-24px) scale(1.12); }
+  }
+
+  .unit{
+    width: min(640px, 100%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    position:relative;
+    z-index:1;
+  }
+
+  .toolbar{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom: 16px;
+  }
+  .brand{
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(244,241,255,0.6);
+    font-weight:500;
+  }
+  .brand b{
+    font-weight:700;
+    background: var(--accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .durations{
+    display:flex;
+    gap: 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 4px;
+    border-radius: 999px;
+  }
+  .durations button{
+    font: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    font-weight:600;
+    color: rgba(244,241,255,0.6);
+    background: transparent;
+    border: none;
+    padding: 6px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .durations button.active{
+    background: var(--accent-grad);
+    color: #2a2040;
+    box-shadow: 0 4px 16px rgba(198,168,255,0.45);
+  }
+
+  /* bloom bar — 取代原本的打字機滾筒 */
+  .platen{
+    width: 100%;
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--bloom-pink), var(--bloom-lavender), var(--bloom-sky), var(--bloom-mint), var(--bloom-pink));
+    background-size: 300% 100%;
+    box-shadow: 0 0 24px rgba(198,168,255,0.5);
+    animation: hueflow 10s linear infinite;
+    margin-bottom: 14px;
+  }
+  @keyframes hueflow{
+    0%{ background-position: 0% 50%; }
+    100%{ background-position: 300% 50%; }
+  }
+
+  .paper-window{
+    width: 100%;
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 28px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 30px 60px rgba(20,10,40,0.45), inset 0 1px 0 rgba(255,255,255,0.6);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    padding: 32px 30px 26px;
+    position: relative;
+    z-index:1;
+  }
+
+  .passage{
+    font-family: "JetBrains Mono", ui-monospace, "Courier New", Menlo, Consolas, monospace;
+    font-size: 1.25rem;
+    line-height: 1.9;
+    letter-spacing: 0.01em;
+    height: 5.7em;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    scroll-behavior: smooth;
+    outline: none;
+    user-select: none;
+  }
+  .passage span{ position:relative; }
+  .passage span.correct{
+    color: var(--ok);
+    text-shadow: 0 0 10px var(--ok-glow), 0 0 22px var(--ok-glow);
+  }
+  .passage span.incorrect{
+    color: var(--err);
+    text-shadow: 0 0 10px var(--err-glow), 0 0 22px var(--err-glow);
+  }
+  .passage span.pending{ color: var(--ink); opacity: 0.4; }
+  .passage span.current::after{
+    content:"";
+    position:absolute;
+    left:-1px; top:1px; bottom:1px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--accent-grad);
+    box-shadow: 0 0 10px rgba(198,168,255,0.9);
+    animation: caret 1s ease-in-out infinite;
+  }
+  @keyframes caret{ 0%,100%{ opacity:1; } 50%{ opacity:0.15; } }
+
+  .capture{
+    position:absolute;
+    opacity:0;
+    pointer-events:none;
+    height:0; width:0;
+  }
+
+  .stats-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(140,120,180,0.25);
+  }
+  .stat{ text-align:left; }
+  .stat .num{
+    font-family: "JetBrains Mono", ui-monospace, "Courier New", monospace;
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height:1;
+    background: var(--accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat .lbl{
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 5px;
+    display:block;
+  }
+
+  .lever{
+    font: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: #2a2040;
+    background: var(--accent-grad);
+    border: none;
+    padding: 11px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 8px 22px rgba(198,168,255,0.45);
+    transition: transform 0.15s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  }
+  .lever:hover{ filter: brightness(1.06); box-shadow: 0 10px 28px rgba(198,168,255,0.6); }
+  .lever:active{ transform: scale(0.96); }
+  .lever:focus-visible{ outline: 2px solid var(--off-white); outline-offset:2px; }
+
+  .hint{
+    margin-top: 16px;
+    font-size: 0.72rem;
+    color: rgba(244,241,255,0.55);
+    text-align:center;
+  }
+
+  /* stamp overlay */
+  .stamp-layer{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    opacity:0;
+  }
+  .stamp-layer.show{
+    opacity:1;
+    pointer-events:auto;
+    background: rgba(255,250,255,0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 28px;
+  }
+  .stamp{
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.7);
+    color: var(--ink);
+    border-radius: 20px;
+    padding: 22px 36px;
+    text-align:center;
+    box-shadow: 0 0 0 1px rgba(198,168,255,0.3), 0 20px 50px rgba(198,168,255,0.4), 0 0 40px rgba(255,174,209,0.35);
+    transform: rotate(-4deg) scale(0.6);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(.2,1.6,.4,1), opacity 0.25s ease;
+  }
+  .stamp-layer.show .stamp{ transform: rotate(-4deg) scale(1); opacity:1; }
+  .stamp .big{
+    font-family: "JetBrains Mono", ui-monospace, "Courier New", monospace;
+    font-size: 2.6rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: var(--accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+  .stamp .small{
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    color: var(--ink-soft);
+  }
+  .stamp .again{
+    margin-top: 16px;
+    display:inline-block;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .passage span.current::after{ animation:none; opacity:1; }
+    .passage{ scroll-behavior: auto; }
+    .stamp{ transition:none; }
+    .platen{ animation:none; }
+    .aurora span{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="aurora" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+
+
+  <div class="unit">
+    <div class="toolbar">
+      <div class="brand">carriage <b>TYPE</b></div>
+      <div class="durations" id="durations">
+        <button data-t="15">15s</button>
+        <button data-t="30" class="active">30s</button>
+        <button data-t="60">60s</button>
+      </div>
+    </div>
+
+    <div class="platen"></div>
+    <div class="paper-window" style="position:relative;">
+      <div class="passage" id="passage" tabindex="0"></div>
+      <textarea class="capture" id="capture" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+
+      <div class="stats-row">
+        <div class="stat"><span class="num" id="wpm">0</span><span class="lbl">WPM</span></div>
+        <div class="stat"><span class="num" id="acc">100%</span><span class="lbl">準確率</span></div>
+        <div class="stat"><span class="num" id="clock">30</span><span class="lbl">剩餘秒數</span></div>
+        <button class="lever" id="restart">↩ 重新捲紙</button>
+      </div>
+
+      <div class="stamp-layer" id="stampLayer">
+        <div class="stamp">
+          <div class="big" id="stampWpm">0 WPM</div>
+          <div class="small" id="stampAcc">accuracy 0%</div>
+          <button class="lever again" id="again">再打一次</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint">點擊紙面開始 → 直接打字，時間到自動結算</div>
+  </div>
+
+<script>
+(function(){
+  const PASSAGES = [
+    "the quick brown fox jumps over a lazy dog while the sun rises slowly over the quiet hills",
+    "practice makes progress not perfection and every small session adds up over time",
+    "good code reads like a clear sentence anyone on the team can follow without extra notes",
+    "she opened the old typewriter case and the keys still clicked with a satisfying weight",
+    "focus on accuracy first because speed without control just means more mistakes to fix",
+    "a calm morning routine can make the rest of a busy day feel much easier to manage",
+  ];
+
+  const passageEl = document.getElementById('passage');
+  const captureEl = document.getElementById('capture');
+  const wpmEl = document.getElementById('wpm');
+  const accEl = document.getElementById('acc');
+  const clockEl = document.getElementById('clock');
+  const restartBtn = document.getElementById('restart');
+  const againBtn = document.getElementById('again');
+  const stampLayer = document.getElementById('stampLayer');
+  const stampWpm = document.getElementById('stampWpm');
+  const stampAcc = document.getElementById('stampAcc');
+  const durationsEl = document.getElementById('durations');
+
+  let text = '';
+  let chars = [];
+  let pos = 0;
+  let totalTyped = 0;
+  let correctTyped = 0;
+  let durationSetting = 30;
+  let secondsLeft = durationSetting;
+  let timerId = null;
+  let started = false;
+  let finished = false;
+
+  function pickPassage(){
+    let words = [];
+    while(words.length < 26){
+      const p = PASSAGES[Math.floor(Math.random()*PASSAGES.length)];
+      words = words.concat(p.split(' '));
+    }
+    return words.slice(0, 26).join(' ');
+  }
+
+  function renderPassage(){
+    passageEl.innerHTML = '';
+    chars.forEach((ch, i)=>{
+      const span = document.createElement('span');
+      span.textContent = ch;
+      span.className = 'pending';
+      if(i === pos) span.classList.add('current');
+      passageEl.appendChild(span);
+    });
+  }
+
+  function scrollCurrentIntoView(){
+    const spans = passageEl.children;
+    if(!spans.length) return;
+    const idx = Math.min(pos, spans.length - 1);
+    const target = spans[idx];
+    const containerRect = passageEl.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const relTop = targetRect.top - containerRect.top;
+    const relBottom = targetRect.bottom - containerRect.top;
+    const maxScroll = Math.max(passageEl.scrollHeight - passageEl.clientHeight, 0);
+
+    if(relBottom > containerRect.height + 0.5){
+      // 目前這行超出可視範圍下緣 → 代表上一行剛打完，整段往上捲一行，
+      // 讓新的一行貼齊底部（取代原本最上面那行的位置）
+      let next = passageEl.scrollTop + (relBottom - containerRect.height);
+      passageEl.scrollTop = Math.min(next, maxScroll);
+    }else if(relTop < -0.5){
+      // 例如按退格鍵回到上一行以上 → 往回捲，讓該行貼齊頂部
+      let next = passageEl.scrollTop + relTop;
+      passageEl.scrollTop = Math.max(next, 0);
+    }
+  }
+
+  function setup(){
+    clearInterval(timerId);
+    text = pickPassage();
+    chars = text.split('');
+    pos = 0;
+    totalTyped = 0;
+    correctTyped = 0;
+    started = false;
+    finished = false;
+    secondsLeft = durationSetting;
+    clockEl.textContent = secondsLeft;
+    wpmEl.textContent = '0';
+    accEl.textContent = '100%';
+    stampLayer.classList.remove('show');
+    captureEl.value = '';
+    renderPassage();
+    passageEl.scrollTop = 0;
+  }
+
+  function updateStats(){
+    const minutesElapsed = (durationSetting - secondsLeft) / 60;
+    const wpm = minutesElapsed > 0 ? Math.round((correctTyped/5) / minutesElapsed) : 0;
+    const acc = totalTyped > 0 ? Math.round((correctTyped/totalTyped)*100) : 100;
+    wpmEl.textContent = wpm;
+    accEl.textContent = acc + '%';
+    return { wpm, acc };
+  }
+
+  function finish(){
+    finished = true;
+    clearInterval(timerId);
+    const { wpm, acc } = updateStats();
+    stampWpm.textContent = wpm + ' WPM';
+    stampAcc.textContent = 'accuracy ' + acc + '%';
+    stampLayer.classList.add('show');
+  }
+
+  function tickClock(){
+    secondsLeft -= 1;
+    clockEl.textContent = Math.max(secondsLeft, 0);
+    updateStats();
+    if(secondsLeft <= 0) finish();
+  }
+
+  function handleInput(e){
+    if(finished) return;
+    const typedChar = e.data;
+    if(e.inputType === 'deleteContentBackward'){
+      if(pos > 0){
+        pos -= 1;
+        totalTyped = Math.max(0, totalTyped - 1);
+      }
+      renderPassage();
+      scrollCurrentIntoView();
+      captureEl.value = '';
+      return;
+    }
+    if(!typedChar) { captureEl.value=''; return; }
+    if(!started){
+      started = true;
+      timerId = setInterval(tickClock, 1000);
+    }
+    const spans = passageEl.children;
+    if(pos < chars.length){
+      const expected = chars[pos];
+      totalTyped += 1;
+      if(typedChar === expected){
+        correctTyped += 1;
+        spans[pos].className = 'correct';
+      }else{
+        spans[pos].className = 'incorrect';
+      }
+      pos += 1;
+      if(pos < spans.length) spans[pos].classList.add('current');
+      updateStats();
+      scrollCurrentIntoView();
+    }
+    captureEl.value = '';
+    if(pos >= chars.length) finish();
+  }
+
+  passageEl.addEventListener('click', ()=> captureEl.focus());
+  captureEl.addEventListener('input', handleInput);
+  restartBtn.addEventListener('click', setup);
+  againBtn.addEventListener('click', ()=>{ setup(); captureEl.focus(); });
+
+  durationsEl.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-t]');
+    if(!btn) return;
+    durationsEl.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    durationSetting = Number(btn.dataset.t);
+    setup();
+  });
+
+  setup();
+})();
+</script>
+</body>
+</html>
